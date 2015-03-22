@@ -236,7 +236,7 @@ thread_unblock (struct thread *t)
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
   /*list_push_back (&ready_list, &t->elem);*/
-  ist_insert_ordered(&ready_list, &t->elem, high_priority_check,NULL);
+  list_insert_ordered(&ready_list, &t->elem, high_priority_check,NULL);
   t->status = THREAD_READY;
   if(curr!=idle_thread && curr->priority < t->priority)
     thread_yield();
@@ -308,7 +308,7 @@ thread_yield (void)
   old_level = intr_disable ();
   if (curr != idle_thread) 
     /*list_push_back (&ready_list, &curr->elem);*/
-    list_insert_ordered(&ready_list, &cur->elem, high_priority_check, NULL);
+    list_insert_ordered(&ready_list, &curr->elem, high_priority_check, NULL);
   curr->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -583,7 +583,7 @@ high_priority_check(struct list_elem *a,
   struct thread *t_a = list_entry (a, struct thread, elem);
   struct thread *t_b = list_entry (b, struct thread, elem);
   if(t_a->priority > t_b->priority)
-    returen true;
+    return true;
   else
-    returen false;
+    return false;
 }
