@@ -319,6 +319,8 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  if(thread_current()!=idle_thread)
+    thread_yield();
 }
 
 /* Returns the current thread's priority. */
