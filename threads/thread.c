@@ -230,7 +230,7 @@ void
 thread_unblock (struct thread *t) 
 {
   enum intr_level old_level;
-
+  struct thread *curr = thread_current();
   ASSERT (is_thread (t));
 
   old_level = intr_disable ();
@@ -582,7 +582,7 @@ high_priority_check(struct list_elem *a,
 {
   struct thread *t_a = list_entry (a, struct thread, elem);
   struct thread *t_b = list_entry (b, struct thread, elem);
-  if(t_a->priority > t2->priority)
+  if(t_a->priority > t_b->priority)
     returen true;
   else
     returen false;
