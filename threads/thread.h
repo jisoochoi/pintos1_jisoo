@@ -139,4 +139,8 @@ bool less_sleeping_ticks (const struct list_elem *a,
                      const struct list_elem *b,
                      void *aux UNUSED);
 
+bool high_priority_check(struct list_elem *a, 
+                    struct list_elem *b, 
+                    void *aux UNUSED);
+
 #endif /* threads/thread.h */

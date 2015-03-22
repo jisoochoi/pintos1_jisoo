@@ -235,8 +235,11 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  /*list_push_back (&ready_list, &t->elem);*/
+  ist_insert_ordered(&ready_list, &t->elem, high_priority_check,NULL);
   t->status = THREAD_READY;
+  if(curr!=idle_thread && curr->priority < t->priority)
+    thread_yield();
   intr_set_level (old_level);
 }
 
@@ -567,4 +570,17 @@ less_sleeping_ticks (const struct list_elem *a,
     return true;
   else
     return false;
+}
+
+bool
+high_priority_check(struct list_elem *a, 
+                    struct list_elem *b, 
+                    void *aux UNUSED)
+{
+  struct thread *t_a = list_entry (a, struct thread, elem);
+  struct thread *t_b = list_entry (b, struct thread, elem);
+  if(t_a->priority > t2->priority)
+    returen true;
+  else
+    returen false;
 }
