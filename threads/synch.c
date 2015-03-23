@@ -69,10 +69,12 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      /*list_push_back (&sema->waiters, &thread_current ()->elem);*/
-      list_insert_ordered(&sema->waiters, &thread_current()->elem, high_priority_check,(void*)NULL);
-      sema->max_priority_waiters = list_entry(list_front(&sema->waiters),struct thread,elem)->priority;
-      thread_block ();
+      //list_push_back (&sema->waiters, &thread_current ()->elem);
+      // 우선순위에 근거하여 waiter에 현재 쓰레드를 high_prioritycheck로 정렬하여 삽입
+      list_insert_ordered(&sema->waiters, &thread_current()->elem, 
+                          high_priority_check, (void *)NULL);
+      sema->max_priority_waiters = list_entry(list_front(&sema->waiters), struct thread, elem)->priority;
+      thread_block (); //세마포어 대기열에서 블락상태로 기다림
     }
   sema->value--;
   intr_set_level (old_level);
@@ -199,8 +201,14 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
+  struct thread* cur =thread_current();
+  cur->trying_lock = lock;
+  lock_donation(lock);
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  lock->holder = cur;
+  list_insert_ordered(&cur->holding_locks, &cur->trying_lock->elem,
+                      high_priority_check,NULL);/*high_priority_lock*/
+  cur->trying_lock =NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -234,6 +242,9 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+
+  list_remove (&lock->elem);
+  lock_donation_rollback (lock);  
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
@@ -339,4 +350,78 @@ cond_broadcast (struct condition *cond, struct lock *lock)
 
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
+}
+
+
+
+void
+lock_donation (struct lock* target_lock)
+{
+  if (target_lock->holder != NULL)
+  {
+    struct thread* lock_owner = target_lock->holder;
+    struct thread* curr = thread_current ();
+ 
+    if (lock_owner->priority < curr->priority)
+    {
+      if (lock_owner->trying_lock != NULL)
+      {
+        if(lock_owner->donated_level == 0)
+          lock_owner->original_priority = lock_owner->priority;
+         
+        lock_owner->priority = curr->priority;
+        lock_owner->donated_level++;
+   
+        lock_donation (lock_owner->trying_lock);
+      }
+      else
+      {
+        if(lock_owner->donated_level == 0)
+          lock_owner->original_priority = lock_owner->priority;
+         
+        lock_owner->priority = curr->priority;
+        lock_owner->donated_level++;
+      }
+    }
+  }
+}
+
+void
+lock_donation_rollback (struct lock* lock)
+{
+  struct thread* curr = thread_current();
+ 
+  if (curr->donated_level > 0)
+  {
+    struct semaphore sema = lock->semaphore;
+    struct list waiters_ = sema.waiters;
+     
+    if (!list_empty (&waiters_))
+    {
+      struct thread* donor_thread = list_entry (list_front (&waiters_), struct thread, elem);
+     
+      if(curr->priority == donor_thread->priority)
+      {
+        if (curr->donated_level == 1)
+        {
+          curr->priority = curr->original_priority;
+          curr->donated_level--;
+        }
+        else
+        {
+          if (!list_empty (&curr->holding_locks))
+          {
+            struct semaphore sema_ = list_entry (list_front (&curr->holding_locks), struct lock, elem)->semaphore;
+            curr->priority = sema_.max_priority_waiters;
+            curr->donated_level--;
+          }
+          else
+          {
+            curr->priority = curr->original_priority;
+            curr->donated_level--;     
+          }
+        }
+      }
+    }
+  } 
 }

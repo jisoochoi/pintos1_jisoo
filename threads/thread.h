@@ -105,6 +105,7 @@ struct thread
     int original_priority;
     bool donated_level;
     struct list holding_locks;
+    struct semaphore semaphore;
 
   };
 
