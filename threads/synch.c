@@ -71,6 +71,7 @@ sema_down (struct semaphore *sema)
     {
       /*list_push_back (&sema->waiters, &thread_current ()->elem);*/
       list_insert_ordered(&sema->waiters, &thread_current()->elem, high_priority_check,(void*)NULL);
+      sema->max_priority_waiters = list_entry(list_front(&sema->waiters),struct thread,elem)->priority;
       thread_block ();
     }
   sema->value--;

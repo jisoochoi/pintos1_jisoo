@@ -3,13 +3,13 @@
 
 #include <list.h>
 #include <stdbool.h>
-
+#include "threads/thread.h"
 /* A counting semaphore. */
 struct semaphore 
   {
     unsigned value;             /* Current value. */
     struct list waiters;        /* List of waiting threads. */
-    struct list max_priority_waiters;
+    int *max_priority_waiters;
   };
 
 void sema_init (struct semaphore *, unsigned value);

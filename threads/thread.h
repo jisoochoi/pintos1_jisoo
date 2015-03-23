@@ -101,7 +101,7 @@ struct thread
     unsigned magic;                     /* Detects stack overflow. */
 
     int64_t sleeping_ticks;
-    struct lock trying_lock;
+    struct lock *trying_lock;
     int original_priority;
     bool donated_level;
     struct list holding_locks;
